@@ -1,7 +1,7 @@
 name: cycle_harmony
-description: Cycle Harmony v0.01.1a with mandatory startup disclaimer consent.
+description: Cycle Harmony v0.01.1b with startup disclaimer state tracking and icon fixes.
 publish_to: "none"
-version: 0.1.1-a+1
+version: 0.1.1-b+1
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

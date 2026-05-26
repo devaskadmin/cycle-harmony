@@ -6,6 +6,21 @@ The format is inspired by Keep a Changelog and follows semantic versioning where
 
 ## [Unreleased]
 
+## [0.01.1b] - 2026-05-25
+
+### Fixed
+- Replaced broken or inconsistent dashboard icons with supported Material icons.
+- Moved mandatory disclaimer launch to app startup initialization instead of dashboard-level rendering.
+- Restored disclaimer visibility by loading legal state before dashboard access.
+
+### Added
+- Versioned disclaimer persistence with acceptance status, acceptance date, last shown timestamp, and first-launch completion tracking.
+- Manual disclaimer reopen support from Settings.
+- Legal debug and status visibility in Settings with acceptance details and disclaimer version information.
+
+### Changed
+- Updated app display version to Cycle Harmony v0.01.1b.
+
 ## [0.01.1a] - 2026-05-25
 
 ### Added

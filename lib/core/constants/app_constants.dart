@@ -1,6 +1,7 @@
 class AppConstants {
   static const String appName = 'Cycle Harmony';
-  static const String appVersion = 'Cycle Harmony v0.01.1a';
+  static const String appVersion = 'Cycle Harmony v0.01.1b';
+  static const String disclaimerVersion = '0.01.1b';
   static const String educationalUseNotice =
       'Educational use only. This app is not a source of medical advice and '
       'should not be used as the sole basis for care decisions.';

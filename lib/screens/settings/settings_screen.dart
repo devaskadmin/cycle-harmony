@@ -1,13 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/models/disclaimer_state.dart';
 import '../../providers/cycle_provider.dart';
-import '../../screens/legal/disclaimer_modal.dart';
-import '../../services/disclaimer_service.dart';
+import '../../services/disclaimer_state_service.dart';
+import '../../widgets/legal/disclaimer_status_card.dart';
 
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({
+    required this.onViewDisclaimer,
+    required this.onResetDisclaimer,
+    super.key,
+  });
+
+  final Future<void> Function() onViewDisclaimer;
+  final Future<void> Function() onResetDisclaimer;
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  final DisclaimerStateService _disclaimerStateService =
+      DisclaimerStateService();
+  DisclaimerState? _disclaimerState;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDisclaimerState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,20 +98,50 @@ class SettingsScreen extends StatelessWidget {
                         children: [
                           const ListTile(
                             title: Text('Legal & Safety'),
-                            subtitle: Text('Educational use, consent, and version details'),
+                            subtitle: Text(
+                                'Educational use, consent, version, and debug details'),
                             leading: Icon(Icons.gavel),
                           ),
                           ListTile(
                             title: const Text('View Disclaimer'),
-                            subtitle: const Text('Read the full educational-use disclaimer'),
+                            subtitle: const Text(
+                                'Manually reopen the disclaimer modal'),
                             leading: const Icon(Icons.shield_outlined),
-                            onTap: () => _showDisclaimer(context),
+                            onTap: _handleViewDisclaimer,
                           ),
                           ListTile(
-                            title: const Text('Reset Acceptance'),
-                            subtitle: const Text('Require the disclaimer again on next launch'),
+                            title: const Text('Reset Disclaimer'),
+                            subtitle: const Text(
+                                'Require the disclaimer again on next launch'),
                             leading: const Icon(Icons.restart_alt),
-                            onTap: () => _resetAcceptance(context),
+                            onTap: () => _handleResetDisclaimer(context),
+                          ),
+                          ListTile(
+                            title: const Text('Show Acceptance Status'),
+                            subtitle: Text(_disclaimerState?.accepted == true
+                                ? 'Accepted'
+                                : 'Pending'),
+                            leading: const Icon(Icons.verified_user_outlined),
+                          ),
+                          ListTile(
+                            title: const Text('Show Acceptance Date'),
+                            subtitle: Text(
+                              _disclaimerState?.acceptedDate == null
+                                  ? 'Not accepted yet'
+                                  : DateFormat.yMMMd()
+                                      .add_jm()
+                                      .format(_disclaimerState!.acceptedDate!),
+                            ),
+                            leading: const Icon(Icons.event_available_outlined),
+                          ),
+                          ListTile(
+                            title: const Text('Show Disclaimer Version'),
+                            subtitle: Text(
+                              _disclaimerState?.version.isNotEmpty == true
+                                  ? _disclaimerState!.version
+                                  : AppConstants.disclaimerVersion,
+                            ),
+                            leading: const Icon(Icons.new_releases_outlined),
                           ),
                           const ListTile(
                             title: Text('App Version'),
@@ -102,6 +156,10 @@ class SettingsScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (_disclaimerState != null) ...[
+                      const SizedBox(height: 12),
+                      DisclaimerStatusCard(state: _disclaimerState!),
+                    ],
                     const SizedBox(height: 12),
                     Card(
                       child: Column(
@@ -149,34 +207,32 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showDisclaimer(BuildContext context) async {
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: 'Disclaimer',
-      barrierColor: Colors.transparent,
-      pageBuilder: (context, _, __) {
-        return DisclaimerModal(
-          mandatory: false,
-          requireConsent: false,
-          checkboxValue: true,
-          onCheckboxChanged: (_) {},
-          primaryLabel: 'Close',
-          onPrimaryPressed: () => Navigator.of(context).pop(),
-          onClose: () => Navigator.of(context).pop(),
-        );
-      },
+  Future<void> _loadDisclaimerState() async {
+    final state = await _disclaimerStateService.readState(
+      currentVersion: AppConstants.disclaimerVersion,
     );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _disclaimerState = state;
+    });
   }
 
-  Future<void> _resetAcceptance(BuildContext context) async {
-    await DisclaimerService().reset();
+  Future<void> _handleViewDisclaimer() async {
+    await widget.onViewDisclaimer();
+    await _loadDisclaimerState();
+  }
+
+  Future<void> _handleResetDisclaimer(BuildContext context) async {
+    await widget.onResetDisclaimer();
+    await _loadDisclaimerState();
     if (!context.mounted) {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Disclaimer acceptance reset. It will be required on next launch.'),
+        content: Text('Disclaimer reset. It will be required on next launch.'),
       ),
     );
   }

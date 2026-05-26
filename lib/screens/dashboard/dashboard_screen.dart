@@ -18,7 +18,7 @@ class DashboardScreen extends StatelessWidget {
     final cards = <_DashboardItem>[
       _DashboardItem(
         title: 'Track Period',
-        icon: Icons.water_drop,
+        icon: Icons.water_drop_outlined,
         colors: const [Color(0xFFF45B95), AppColors.trackPeriod],
         onTap: () => onSelectBottomTab(1),
       ),
@@ -38,7 +38,7 @@ class DashboardScreen extends StatelessWidget {
       ),
       _DashboardItem(
         title: 'Fertility Plan',
-        icon: Icons.favorite,
+        icon: Icons.favorite_outline,
         colors: const [Color(0xFF68C97A), AppColors.fertility],
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const FertilityScreen()),
@@ -46,21 +46,21 @@ class DashboardScreen extends StatelessWidget {
       ),
       _DashboardItem(
         title: 'AI Health Insights',
-        icon: Icons.lightbulb,
+        icon: Icons.lightbulb_outline,
         colors: const [Color(0xFFF8BB55), AppColors.ai],
         onTap: () =>
             _showPlaceholder(context, 'AI Health Insights is coming in v0.02'),
       ),
       _DashboardItem(
         title: 'Health Analyzer',
-        icon: Icons.analytics,
+        icon: Icons.analytics_outlined,
         colors: const [Color(0xFFBCAAA4), Color(0xFF8D6E63)],
         onTap: () => _showPlaceholder(
             context, 'Health Analyzer is a local placeholder for v0.01'),
       ),
       _DashboardItem(
         title: 'Cycle Forecast',
-        icon: Icons.track_changes,
+        icon: Icons.timeline,
         colors: const [Color(0xFF42C8D5), AppColors.forecast],
         onTap: () => onSelectBottomTab(1),
       ),
@@ -74,13 +74,13 @@ class DashboardScreen extends StatelessWidget {
       ),
       _DashboardItem(
         title: 'My Reminders',
-        icon: Icons.notifications,
+        icon: Icons.notifications_active,
         colors: const [Color(0xFF9D72DE), Color(0xFF7D56C8)],
         onTap: () => onSelectBottomTab(3),
       ),
       _DashboardItem(
-        title: 'AI Chat Assistant',
-        icon: Icons.chat_bubble,
+        title: 'AI Assistant',
+        icon: Icons.smart_toy_outlined,
         colors: const [Color(0xFF31C2B7), AppColors.forecast],
         onTap: () =>
             _showPlaceholder(context, 'AI Chat Assistant is disabled in v0.01'),
@@ -96,7 +96,7 @@ class DashboardScreen extends StatelessWidget {
           flexibleSpace: FlexibleSpaceBar(
             titlePadding: EdgeInsets.fromLTRB(16, 0, 16, 16),
             title: Text(
-              'CycleAI Dashboard',
+              'Cycle Harmony Dashboard',
               style:
                   TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
             ),
