@@ -1,7 +1,7 @@
 name: cycle_harmony
-description: CycleAI v0.01 MVP period tracking app.
+description: Cycle Harmony v0.01.1a with mandatory startup disclaimer consent.
 publish_to: "none"
-version: 0.0.1+1
+version: 0.1.1-a+1
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

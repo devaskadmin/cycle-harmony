@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../providers/cycle_provider.dart';
+import '../../screens/legal/disclaimer_modal.dart';
+import '../../services/disclaimer_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -70,6 +72,40 @@ class SettingsScreen extends StatelessWidget {
                     Card(
                       child: Column(
                         children: [
+                          const ListTile(
+                            title: Text('Legal & Safety'),
+                            subtitle: Text('Educational use, consent, and version details'),
+                            leading: Icon(Icons.gavel),
+                          ),
+                          ListTile(
+                            title: const Text('View Disclaimer'),
+                            subtitle: const Text('Read the full educational-use disclaimer'),
+                            leading: const Icon(Icons.shield_outlined),
+                            onTap: () => _showDisclaimer(context),
+                          ),
+                          ListTile(
+                            title: const Text('Reset Acceptance'),
+                            subtitle: const Text('Require the disclaimer again on next launch'),
+                            leading: const Icon(Icons.restart_alt),
+                            onTap: () => _resetAcceptance(context),
+                          ),
+                          const ListTile(
+                            title: Text('App Version'),
+                            subtitle: Text(AppConstants.appVersion),
+                            leading: Icon(Icons.info_outline),
+                          ),
+                          const ListTile(
+                            title: Text('Educational Use Notice'),
+                            subtitle: Text(AppConstants.educationalUseNotice),
+                            leading: Icon(Icons.menu_book_outlined),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      child: Column(
+                        children: [
                           ListTile(
                             title: const Text('Export (placeholder)'),
                             subtitle:
@@ -110,6 +146,38 @@ class SettingsScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Future<void> _showDisclaimer(BuildContext context) async {
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'Disclaimer',
+      barrierColor: Colors.transparent,
+      pageBuilder: (context, _, __) {
+        return DisclaimerModal(
+          mandatory: false,
+          requireConsent: false,
+          checkboxValue: true,
+          onCheckboxChanged: (_) {},
+          primaryLabel: 'Close',
+          onPrimaryPressed: () => Navigator.of(context).pop(),
+          onClose: () => Navigator.of(context).pop(),
+        );
+      },
+    );
+  }
+
+  Future<void> _resetAcceptance(BuildContext context) async {
+    await DisclaimerService().reset();
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Disclaimer acceptance reset. It will be required on next launch.'),
+      ),
     );
   }
 

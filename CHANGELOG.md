@@ -6,6 +6,23 @@ The format is inspired by Keep a Changelog and follows semantic versioning where
 
 ## [Unreleased]
 
+## [0.01.1a] - 2026-05-25
+
+### Added
+- Mandatory startup disclaimer gate that blocks app access until the user explicitly accepts the educational-use notice.
+- Full-screen legal modal with disabled background interaction, disabled back navigation, sticky consent footer, scrollable body, and animated entrance.
+- SharedPreferences-backed disclaimer acceptance storage for first-launch gating.
+- Legal & Safety section in Settings with disclaimer viewing and acceptance reset controls.
+- Dedicated legal UI components and disclaimer service.
+
+### Changed
+- Updated app display version to Cycle Harmony v0.01.1a.
+- Updated project package metadata for the disclaimer consent release.
+
+### Safety Notes
+- Disclaimer acceptance is stored locally on device only.
+- Resetting acceptance forces the startup consent flow to appear again on the next launch.
+
 ## [0.0.1] - 2026-05-25
 
 ### Added
