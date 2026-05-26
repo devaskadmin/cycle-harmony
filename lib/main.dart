@@ -1,40 +1,107 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-void main() => runApp(const CycleHarmonyApp());
+import 'core/constants/app_constants.dart';
+import 'core/theme/app_theme.dart';
+import 'providers/cycle_provider.dart';
+import 'providers/mood_provider.dart';
+import 'providers/reminder_provider.dart';
+import 'screens/calendar/calendar_screen.dart';
+import 'screens/dashboard/dashboard_screen.dart';
+import 'screens/reminders/reminders_screen.dart';
+import 'screens/settings/settings_screen.dart';
+import 'screens/tracker/tracker_screen.dart';
+import 'services/local_storage_service.dart';
 
-class CycleHarmonyApp extends StatelessWidget {
-  const CycleHarmonyApp({super.key});
+void main() {
+  runApp(const CycleAIApp());
+}
+
+class CycleAIApp extends StatelessWidget {
+  const CycleAIApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Cycle Harmony',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.pinkAccent),
-        useMaterial3: true,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<CycleProvider>(
+          create: (_) => CycleProvider(LocalStorageService())..init(),
+        ),
+        ChangeNotifierProvider<ReminderProvider>(
+          create: (_) => ReminderProvider(LocalStorageService())..init(),
+        ),
+        ChangeNotifierProvider<MoodProvider>(
+          create: (_) => MoodProvider(LocalStorageService())..init(),
+        ),
+      ],
+      child: Consumer<CycleProvider>(
+        builder: (context, cycle, _) {
+          return MaterialApp(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme(),
+            darkTheme: AppTheme.darkTheme(),
+            themeMode: cycle.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            home: const HomeShell(),
+          );
+        },
       ),
-      home: const CycleHarmonyHome(),
     );
   }
 }
 
-class CycleHarmonyHome extends StatelessWidget {
-  const CycleHarmonyHome({super.key});
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key});
+
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
+    final cycleLoaded = context.watch<CycleProvider>().isLoaded;
+    final reminderLoaded = context.watch<ReminderProvider>().isLoaded;
+    final moodLoaded = context.watch<MoodProvider>().isLoaded;
+
+    if (!cycleLoaded || !reminderLoaded || !moodLoaded) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final pages = <Widget>[
+      DashboardScreen(onSelectBottomTab: _onBottomTabSelected),
+      const TrackerScreen(),
+      const CalendarScreen(),
+      const RemindersScreen(),
+      const SettingsScreen(),
+    ];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Cycle Harmony')),
-      body: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.favorite, size: 80, color: Colors.pinkAccent),
-            SizedBox(height: 16),
-            Text('Welcome to Cycle Harmony', style: TextStyle(fontSize: 20)),
-          ],
-        ),
+      body: IndexedStack(index: _index, children: pages),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: _onBottomTabSelected,
+        destinations: const [
+          NavigationDestination(
+              icon: Icon(Icons.grid_view), label: 'Dashboard'),
+          NavigationDestination(icon: Icon(Icons.water_drop), label: 'Tracker'),
+          NavigationDestination(
+              icon: Icon(Icons.calendar_month), label: 'Calendar'),
+          NavigationDestination(
+              icon: Icon(Icons.notifications), label: 'Reminders'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
+        ],
       ),
     );
+  }
+
+  void _onBottomTabSelected(int index) {
+    setState(() {
+      _index = index;
+    });
   }
 }

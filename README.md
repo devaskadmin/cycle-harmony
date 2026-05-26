@@ -2,6 +2,10 @@
 
 A new Flutter project.
 
+## Changelog
+
+- See [CHANGELOG.md](CHANGELOG.md) for release notes and version history.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
