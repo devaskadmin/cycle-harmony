@@ -6,6 +6,9 @@ The format is inspired by Keep a Changelog and follows semantic versioning where
 
 ## [Unreleased]
 
+### Notes
+- No unreleased functional changes are tracked at this time.
+
 ## [0.01.1b] - 2026-05-25
 
 ### Fixed
