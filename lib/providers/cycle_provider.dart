@@ -24,6 +24,7 @@ class CycleProvider extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
   int get defaultCycleLength => _defaultCycleLength;
   int get defaultPeriodLength => _defaultPeriodLength;
+  bool get hasCycleSetup => _entries.isNotEmpty;
   List<CycleEntry> get entries => List<CycleEntry>.unmodifiable(_entries);
 
   CycleEntry? get currentCycle {
@@ -59,36 +60,39 @@ class CycleProvider extends ChangeNotifier {
         ..addAll(rawNotes.map((k, v) => MapEntry(k, v.toString())));
     }
 
-    if (_entries.isEmpty) {
-      _seedStarterCycle();
-      await _persist();
-    }
-
     _isLoaded = true;
     notifyListeners();
   }
 
   Future<void> logPeriodStart([DateTime? start]) async {
     final startDate = DateUtilsX.dateOnly(start ?? DateTime.now());
-    final periodEnd = startDate.add(Duration(days: _defaultPeriodLength - 1));
-    final ovulationDate =
-        startDate.add(Duration(days: _defaultCycleLength - 14));
-    final fertilityStart = ovulationDate.subtract(const Duration(days: 5));
-    final fertilityEnd = ovulationDate.add(const Duration(days: 1));
-
-    final entry = CycleEntry(
-      id: startDate.millisecondsSinceEpoch.toString(),
-      startDate: startDate,
-      endDate: periodEnd,
-      cycleLength: _defaultCycleLength,
-      periodLength: _defaultPeriodLength,
-      ovulationDate: ovulationDate,
-      fertilityStart: fertilityStart,
-      fertilityEnd: fertilityEnd,
-      notes: '',
+    _entries.add(
+      _buildCycleEntry(
+        startDate: startDate,
+        cycleLength: _defaultCycleLength,
+        periodLength: _defaultPeriodLength,
+      ),
     );
+    await _persist();
+    notifyListeners();
+  }
 
-    _entries.add(entry);
+  Future<void> saveInitialCycleSetup({
+    required DateTime lastPeriodStart,
+    required int cycleLength,
+    required int periodLength,
+  }) async {
+    _defaultCycleLength = cycleLength;
+    _defaultPeriodLength = periodLength;
+    _entries
+      ..clear()
+      ..add(
+        _buildCycleEntry(
+          startDate: DateUtilsX.dateOnly(lastPeriodStart),
+          cycleLength: cycleLength,
+          periodLength: periodLength,
+        ),
+      );
     await _persist();
     notifyListeners();
   }
@@ -232,27 +236,27 @@ class CycleProvider extends ChangeNotifier {
     );
   }
 
-  void _seedStarterCycle() {
-    final seedStart =
-        DateUtilsX.dateOnly(DateTime.now().subtract(const Duration(days: 16)));
-    final periodEnd = seedStart.add(Duration(days: _defaultPeriodLength - 1));
+  CycleEntry _buildCycleEntry({
+    required DateTime startDate,
+    required int cycleLength,
+    required int periodLength,
+  }) {
+    final periodEnd = startDate.add(Duration(days: periodLength - 1));
     final ovulationDate =
-        seedStart.add(Duration(days: _defaultCycleLength - 14));
+        startDate.add(Duration(days: cycleLength - 14));
     final fertilityStart = ovulationDate.subtract(const Duration(days: 5));
     final fertilityEnd = ovulationDate.add(const Duration(days: 1));
 
-    _entries.add(
-      CycleEntry(
-        id: seedStart.millisecondsSinceEpoch.toString(),
-        startDate: seedStart,
-        endDate: periodEnd,
-        cycleLength: _defaultCycleLength,
-        periodLength: _defaultPeriodLength,
-        ovulationDate: ovulationDate,
-        fertilityStart: fertilityStart,
-        fertilityEnd: fertilityEnd,
-        notes: 'Starter cycle for v0.01 UI',
-      ),
+    return CycleEntry(
+      id: startDate.millisecondsSinceEpoch.toString(),
+      startDate: startDate,
+      endDate: periodEnd,
+      cycleLength: cycleLength,
+      periodLength: periodLength,
+      ovulationDate: ovulationDate,
+      fertilityStart: fertilityStart,
+      fertilityEnd: fertilityEnd,
+      notes: '',
     );
   }
 }

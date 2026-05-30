@@ -10,6 +10,7 @@ import 'providers/reminder_provider.dart';
 import 'screens/calendar/calendar_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/legal/disclaimer_modal.dart';
+import 'screens/onboarding/cycle_setup_screen.dart';
 import 'screens/reminders/reminders_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/tracker/tracker_screen.dart';
@@ -77,7 +78,8 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    final cycleLoaded = context.watch<CycleProvider>().isLoaded;
+    final cycle = context.watch<CycleProvider>();
+    final cycleLoaded = cycle.isLoaded;
     final reminderLoaded = context.watch<ReminderProvider>().isLoaded;
     final moodLoaded = context.watch<MoodProvider>().isLoaded;
 
@@ -89,6 +91,10 @@ class _HomeShellState extends State<HomeShell> {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
+    }
+
+    if (_requiresCycleSetup(cycle)) {
+      return CycleSetupScreen(onComplete: _handleCycleSetupComplete);
     }
 
     final pages = <Widget>[
@@ -146,6 +152,10 @@ class _HomeShellState extends State<HomeShell> {
         _showMandatoryDisclaimer();
       });
     }
+  }
+
+  bool _requiresCycleSetup(CycleProvider cycle) {
+    return _disclaimerState?.accepted == true && !cycle.hasCycleSetup;
   }
 
   Future<void> _showMandatoryDisclaimer() async {
@@ -269,6 +279,16 @@ class _HomeShellState extends State<HomeShell> {
     setState(() {
       _disclaimerState = state;
       _consentChecked = false;
+    });
+  }
+
+  void _handleCycleSetupComplete() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _index = 0;
     });
   }
 }
