@@ -8,6 +8,11 @@ class LocalStorageService {
     await prefs.setString(key, jsonEncode(data));
   }
 
+  Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
   Future<Map<String, dynamic>?> readJson(String key) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(key);

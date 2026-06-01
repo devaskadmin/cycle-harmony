@@ -8,11 +8,15 @@ import 'providers/cycle_provider.dart';
 import 'providers/mood_provider.dart';
 import 'providers/reminder_provider.dart';
 import 'screens/calendar/calendar_screen.dart';
+import 'screens/cycle/cycle_hub_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/legal/disclaimer_modal.dart';
+import 'screens/nutrition/nutrition_center_screen.dart';
 import 'screens/onboarding/cycle_setup_screen.dart';
+import 'screens/recipes/recipes_screen.dart';
 import 'screens/reminders/reminders_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'screens/symptoms/symptoms_screen.dart';
 import 'screens/tracker/tracker_screen.dart';
 import 'services/disclaimer_state_service.dart';
 import 'services/local_storage_service.dart';
@@ -68,6 +72,7 @@ class _HomeShellState extends State<HomeShell> {
   DisclaimerState? _disclaimerState;
   bool _startupReady = false;
   bool _disclaimerDialogVisible = false;
+  bool _mandatoryDisclaimerPending = false;
   bool _consentChecked = false;
 
   @override
@@ -93,15 +98,26 @@ class _HomeShellState extends State<HomeShell> {
       );
     }
 
+    if (_mandatoryDisclaimerPending) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     if (_requiresCycleSetup(cycle)) {
       return CycleSetupScreen(onComplete: _handleCycleSetupComplete);
     }
 
     final pages = <Widget>[
       DashboardScreen(onSelectBottomTab: _onBottomTabSelected),
-      const TrackerScreen(),
-      const CalendarScreen(),
-      const RemindersScreen(),
+      const NutritionCenterScreen(),
+      const RecipesScreen(),
+      CycleHubScreen(
+        onOpenTracker: () => _openScreen(const TrackerScreen()),
+        onOpenCalendar: () => _openScreen(const CalendarScreen()),
+        onOpenReminders: () => _openScreen(const RemindersScreen()),
+        onOpenCheckIn: () => _openScreen(const SymptomsScreen()),
+      ),
       SettingsScreen(
         onViewDisclaimer: _openDisclaimerFromSettings,
         onResetDisclaimer: _resetDisclaimer,
@@ -114,13 +130,11 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: _index,
         onDestinationSelected: _onBottomTabSelected,
         destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_filled), label: 'Today'),
           NavigationDestination(
-              icon: Icon(Icons.grid_view), label: 'Dashboard'),
-          NavigationDestination(icon: Icon(Icons.water_drop), label: 'Tracker'),
-          NavigationDestination(
-              icon: Icon(Icons.calendar_month), label: 'Calendar'),
-          NavigationDestination(
-              icon: Icon(Icons.notifications), label: 'Reminders'),
+              icon: Icon(Icons.restaurant_menu), label: 'Nutrition'),
+          NavigationDestination(icon: Icon(Icons.menu_book), label: 'Recipes'),
+          NavigationDestination(icon: Icon(Icons.cyclone), label: 'Cycle'),
           NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
@@ -133,10 +147,18 @@ class _HomeShellState extends State<HomeShell> {
     });
   }
 
+  void _openScreen(Widget screen) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => screen),
+    );
+  }
+
   Future<void> _initializeStartup() async {
     final state = await _disclaimerStateService.readState(
       currentVersion: AppConstants.disclaimerVersion,
     );
+    final needsMandatoryDisclaimer =
+        state.needsDisplay(AppConstants.disclaimerVersion);
     if (!mounted) {
       return;
     }
@@ -144,10 +166,11 @@ class _HomeShellState extends State<HomeShell> {
     setState(() {
       _disclaimerState = state;
       _startupReady = true;
+      _mandatoryDisclaimerPending = needsMandatoryDisclaimer;
       _consentChecked = state.accepted;
     });
 
-    if (state.needsDisplay(AppConstants.disclaimerVersion)) {
+    if (needsMandatoryDisclaimer) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showMandatoryDisclaimer();
       });
@@ -210,7 +233,7 @@ class _HomeShellState extends State<HomeShell> {
     );
 
     _disclaimerDialogVisible = false;
-    await _refreshDisclaimerState();
+    await _refreshDisclaimerState(clearMandatoryPending: true);
   }
 
   Future<void> _openDisclaimerFromSettings() async {
@@ -243,7 +266,8 @@ class _HomeShellState extends State<HomeShell> {
     await _refreshDisclaimerState();
   }
 
-  Future<void> _refreshDisclaimerState() async {
+  Future<void> _refreshDisclaimerState(
+      {bool clearMandatoryPending = false}) async {
     final state = await _disclaimerStateService.readState(
       currentVersion: AppConstants.disclaimerVersion,
     );
@@ -252,6 +276,9 @@ class _HomeShellState extends State<HomeShell> {
     }
     setState(() {
       _disclaimerState = state;
+      if (clearMandatoryPending) {
+        _mandatoryDisclaimerPending = false;
+      }
       _consentChecked = state.accepted;
     });
   }

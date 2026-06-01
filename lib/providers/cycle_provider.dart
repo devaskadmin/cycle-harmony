@@ -14,6 +14,7 @@ class CycleProvider extends ChangeNotifier {
 
   bool _isLoaded = false;
   bool _isDarkMode = false;
+  String _firstName = '';
   int _defaultCycleLength = 28;
   int _defaultPeriodLength = 5;
 
@@ -22,6 +23,7 @@ class CycleProvider extends ChangeNotifier {
 
   bool get isLoaded => _isLoaded;
   bool get isDarkMode => _isDarkMode;
+  String get firstName => _firstName;
   int get defaultCycleLength => _defaultCycleLength;
   int get defaultPeriodLength => _defaultPeriodLength;
   bool get hasCycleSetup => _entries.isNotEmpty;
@@ -44,6 +46,8 @@ class CycleProvider extends ChangeNotifier {
     final data = await _storageService.readJson(AppConstants.cycleProviderKey);
     if (data != null) {
       _isDarkMode = (data['isDarkMode'] as bool?) ?? false;
+      final savedFirstName = data['firstName'];
+      _firstName = savedFirstName is String ? savedFirstName.trim() : '';
       _defaultCycleLength = (data['defaultCycleLength'] as int?) ?? 28;
       _defaultPeriodLength = (data['defaultPeriodLength'] as int?) ?? 5;
 
@@ -81,7 +85,9 @@ class CycleProvider extends ChangeNotifier {
     required DateTime lastPeriodStart,
     required int cycleLength,
     required int periodLength,
+    String? firstName,
   }) async {
+    _firstName = firstName?.trim() ?? _firstName;
     _defaultCycleLength = cycleLength;
     _defaultPeriodLength = periodLength;
     _entries
@@ -110,6 +116,12 @@ class CycleProvider extends ChangeNotifier {
 
   Future<void> setDarkMode(bool value) async {
     _isDarkMode = value;
+    await _persist();
+    notifyListeners();
+  }
+
+  Future<void> saveFirstName(String value) async {
+    _firstName = value.trim();
     await _persist();
     notifyListeners();
   }
@@ -228,6 +240,7 @@ class CycleProvider extends ChangeNotifier {
       AppConstants.cycleProviderKey,
       {
         'isDarkMode': _isDarkMode,
+        'firstName': _firstName,
         'defaultCycleLength': _defaultCycleLength,
         'defaultPeriodLength': _defaultPeriodLength,
         'entries': _entries.map((e) => e.toMap()).toList(),
@@ -242,8 +255,7 @@ class CycleProvider extends ChangeNotifier {
     required int periodLength,
   }) {
     final periodEnd = startDate.add(Duration(days: periodLength - 1));
-    final ovulationDate =
-        startDate.add(Duration(days: cycleLength - 14));
+    final ovulationDate = startDate.add(Duration(days: cycleLength - 14));
     final fertilityStart = ovulationDate.subtract(const Duration(days: 5));
     final fertilityEnd = ovulationDate.add(const Duration(days: 1));
 

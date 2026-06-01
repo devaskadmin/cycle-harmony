@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +7,9 @@ import '../../core/constants/app_constants.dart';
 import '../../core/models/disclaimer_state.dart';
 import '../../providers/cycle_provider.dart';
 import '../../services/disclaimer_state_service.dart';
+import '../../services/local_storage_service.dart';
 import '../../widgets/legal/disclaimer_status_card.dart';
+import '../../widgets/forms/cycle_settings_form.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -25,6 +28,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final DisclaimerStateService _disclaimerStateService =
       DisclaimerStateService();
+  final LocalStorageService _localStorageService = LocalStorageService();
   DisclaimerState? _disclaimerState;
 
   @override
@@ -52,6 +56,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
               sliver: SliverToBoxAdapter(
                 child: Column(
                   children: [
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Cycle Settings',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Update your cycle inputs and period start to refresh predictions.',
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
+                            const SizedBox(height: 16),
+                            _CycleSettingRow(
+                              label: 'Last period start date',
+                              value: cycle.currentCycle == null
+                                  ? 'Not set yet'
+                                  : DateFormat.yMMMd()
+                                      .format(cycle.currentCycle!.startDate),
+                            ),
+                            const SizedBox(height: 10),
+                            _CycleSettingRow(
+                              label: 'Average cycle length',
+                              value: '${cycle.defaultCycleLength} days',
+                            ),
+                            const SizedBox(height: 10),
+                            _CycleSettingRow(
+                              label: 'Period length',
+                              value: '${cycle.defaultPeriodLength} days',
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                FilledButton.icon(
+                                  onPressed: () => _editCycleSettings(context),
+                                  icon: const Icon(Icons.edit_calendar),
+                                  label: const Text('Edit Cycle Settings'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _markPeriodStartedToday(context),
+                                  icon: const Icon(Icons.water_drop_outlined),
+                                  label: const Text('My Period Started Today'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Card(
                       child: Column(
                         children: [
@@ -192,6 +255,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
+                    if (kDebugMode) ...[
+                      const SizedBox(height: 12),
+                      Card(
+                        child: Column(
+                          children: [
+                            const ListTile(
+                              title: Text('Developer Tools'),
+                              subtitle: Text(
+                                  'Temporary test actions for onboarding and local state'),
+                              leading: Icon(Icons.developer_mode),
+                            ),
+                            ListTile(
+                              title: const Text('Reset App to First-Run State'),
+                              subtitle: const Text(
+                                  'Clears all local data. Restart app after reset.'),
+                              leading:
+                                  const Icon(Icons.delete_forever_outlined),
+                              onTap: () =>
+                                  _confirmAndResetAllLocalData(context),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Text(
                       AppConstants.appVersion,
@@ -237,6 +324,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _confirmAndResetAllLocalData(BuildContext context) async {
+    final shouldReset = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Reset local app data?'),
+          content: const Text(
+            'This clears all local data used by Cycle Harmony (cycle setup, reminders, moods, and disclaimer state).\n\n'
+            'Use this for developer testing only.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Reset'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldReset != true) {
+      return;
+    }
+
+    await _localStorageService.clearAll();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Local app data cleared. Fully close and relaunch the app to test first-run onboarding.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editCycleSettings(BuildContext context) async {
+    final cycle = context.read<CycleProvider>();
+    final currentCycle = cycle.currentCycle;
+    final initialStart = currentCycle?.startDate ?? DateTime.now();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit Cycle Settings'),
+          content: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: CycleSettingsForm(
+                initialFirstName: cycle.firstName,
+                initialLastPeriodStart: initialStart,
+                initialCycleLength:
+                    currentCycle?.cycleLength ?? cycle.defaultCycleLength,
+                initialPeriodLength:
+                    currentCycle?.periodLength ?? cycle.defaultPeriodLength,
+                submitLabel: 'Save Changes',
+                onSubmitted: ({
+                  required firstName,
+                  required lastPeriodStart,
+                  required cycleLength,
+                  required periodLength,
+                }) async {
+                  await cycle.saveInitialCycleSetup(
+                    lastPeriodStart: lastPeriodStart,
+                    cycleLength: cycleLength,
+                    periodLength: periodLength,
+                    firstName: firstName,
+                  );
+                  if (!dialogContext.mounted) {
+                    return;
+                  }
+                  Navigator.of(dialogContext).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Cycle settings updated.'),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _markPeriodStartedToday(BuildContext context) async {
+    final cycle = context.read<CycleProvider>();
+    await cycle.logPeriodStart(DateTime.now());
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Period start logged for today. Predictions updated.'),
+      ),
+    );
+  }
+
   Future<void> _editIntSetting(
     BuildContext context, {
     required String title,
@@ -275,6 +469,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+class _CycleSettingRow extends StatelessWidget {
+  const _CycleSettingRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(value),
+      ],
     );
   }
 }
