@@ -97,7 +97,10 @@ class DashboardScreen extends StatelessWidget {
           sliver: SliverToBoxAdapter(
             child: Consumer<CycleProvider>(
               builder: (context, cycle, _) {
-                return _DashboardHeroCard(cycle: cycle);
+                return _DashboardHeroCard(
+                  cycle: cycle,
+                  onOpenNutrition: () => onSelectBottomTab(1),
+                );
               },
             ),
           ),
@@ -146,9 +149,13 @@ class DashboardScreen extends StatelessWidget {
 }
 
 class _DashboardHeroCard extends StatelessWidget {
-  const _DashboardHeroCard({required this.cycle});
+  const _DashboardHeroCard({
+    required this.cycle,
+    required this.onOpenNutrition,
+  });
 
   final CycleProvider cycle;
+  final VoidCallback onOpenNutrition;
 
   @override
   Widget build(BuildContext context) {
@@ -199,11 +206,12 @@ class _DashboardHeroCard extends StatelessWidget {
         cycle.currentCycle?.cycleLength ?? cycle.defaultCycleLength;
     final nextPeriod = cycle.nextPeriodDate();
     final phase = _phaseLabel(cycle, now);
-
-    final nutrition = CycleGuidance.nutritionByPhase[phase] ??
-        CycleGuidance.nutritionByPhase['Follicular']!;
-    final activity = CycleGuidance.activityByPhase[phase] ??
-        CycleGuidance.activityByPhase['Follicular']!;
+    final profile = CycleGuidance.profileForPhase(phase);
+    final presentation = _presentationFor(phase);
+    final nutrientNames = profile.priorityNutrients
+        .take(4)
+        .map((guidance) => guidance.name)
+        .toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -230,155 +238,116 @@ class _DashboardHeroCard extends StatelessWidget {
               '$greeting, $displayName',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
+                fontSize: 23,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 18),
             Text(
-              'You are currently in your $phase Phase',
+              '$phase Phase',
+              style: const TextStyle(
+                color: Color(0xFFE9DBFF),
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              presentation.theme,
               style: const TextStyle(
                 color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Day $cycleDay of $cycleLength',
-              style: const TextStyle(
-                color: Color(0xFFE5D9FF),
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w800,
+                fontSize: 28,
+                height: 1.05,
               ),
             ),
             const SizedBox(height: 14),
-            Text(
-              'Next period predicted: ${DateFormat.MMMMd().format(nextPeriod)}',
-              style: const TextStyle(color: Colors.white),
+            Row(
+              children: [
+                Expanded(
+                  child: _HeroStatPill(
+                    label: 'Cycle Day',
+                    value: '$cycleDay of $cycleLength',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _HeroStatPill(
+                    label: 'Next Period',
+                    value: DateFormat.MMMMd().format(nextPeriod),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
+            Text(
+              presentation.coachingSummary,
+              style: const TextStyle(
+                color: Colors.white,
+                height: 1.4,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const _HeroSectionLabel(
+              icon: Icons.auto_awesome,
+              label: 'Priority Nutrients',
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: nutrientNames
+                  .map(
+                    (name) => _NutrientChip(label: name),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 18),
             Container(
               width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               decoration: BoxDecoration(
-                color: const Color(0x14FFFFFF),
+                color: const Color(0x20FFFFFF),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0x50FFFFFF)),
+                border: Border.all(color: const Color(0x55FFFFFF)),
               ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final sideBySide = constraints.maxWidth >= 760;
-
-                    final nutritionCard = Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFD9C6FF)),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.restaurant_menu,
-                                  color: AppColors.primary,
-                                  size: 18,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  "Today's Nutrition Focus",
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ...nutrition.map(
-                              (item) => Padding(
-                                padding: const EdgeInsets.only(bottom: 5),
-                                child: Text(
-                                  '• $item',
-                                  style: const TextStyle(
-                                    color: Color(0xFF2F2348),
-                                    fontWeight: FontWeight.w600,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _HeroSectionLabel(
+                    icon: Icons.directions_run,
+                    label: "Today's Activity Focus",
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    presentation.activitySummary,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: onOpenNutrition,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                    );
-
-                    final activityCard = Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0x20FFFFFF),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0x66FFFFFF)),
+                      child: const Text(
+                        'View Full Nutrition Blueprint',
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.directions_run,
-                                  color: Color(0xFFEFE6FF),
-                                  size: 18,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  "Today's Activity Focus",
-                                  style: TextStyle(
-                                    color: Color(0xFFEFE6FF),
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              activity,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                height: 1.35,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-
-                    if (sideBySide) {
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 2, child: nutritionCard),
-                          const SizedBox(width: 10),
-                          Expanded(child: activityCard),
-                        ],
-                      );
-                    }
-
-                    return Column(
-                      children: [
-                        nutritionCard,
-                        const SizedBox(height: 10),
-                        activityCard,
-                      ],
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -419,6 +388,147 @@ class _DashboardHeroCard extends StatelessWidget {
     }
     return 'Luteal';
   }
+
+  _PhasePresentation _presentationFor(String phase) {
+    switch (phase) {
+      case 'Menstrual':
+        return const _PhasePresentation(
+          theme: 'Recovery & Replenishment',
+          coachingSummary:
+              'Restore energy with gentle nourishment, hydration, and lighter movement.',
+          activitySummary: 'Recovery, walking, mobility, yoga',
+        );
+      case 'Follicular':
+        return const _PhasePresentation(
+          theme: 'Build & Prepare',
+          coachingSummary:
+              'Use rising energy to support balanced meals, productive training, and forward momentum.',
+          activitySummary: 'Strength, intervals, skills, mobility',
+        );
+      case 'Ovulatory':
+        return const _PhasePresentation(
+          theme: 'Peak Performance',
+          coachingSummary:
+              'Lean into your highest-output window with strong meals, hydration, and confident movement.',
+          activitySummary: 'Power, intervals, classes, mobility',
+        );
+      case 'Luteal':
+      default:
+        return const _PhasePresentation(
+          theme: 'Stability & Recovery',
+          coachingSummary:
+              'Keep meals structured and movement steady to support energy, appetite, and recovery.',
+          activitySummary: 'Strength, walking, mobility, recovery',
+        );
+    }
+  }
+}
+
+class _HeroStatPill extends StatelessWidget {
+  const _HeroStatPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0x18FFFFFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x45FFFFFF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFEADFFF),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroSectionLabel extends StatelessWidget {
+  const _HeroSectionLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFFEFE4FF), size: 16),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFEFE4FF),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NutrientChip extends StatelessWidget {
+  const _NutrientChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _PhasePresentation {
+  const _PhasePresentation({
+    required this.theme,
+    required this.coachingSummary,
+    required this.activitySummary,
+  });
+
+  final String theme;
+  final String coachingSummary;
+  final String activitySummary;
 }
 
 class _DashboardItem {
